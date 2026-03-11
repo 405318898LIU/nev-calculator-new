@@ -1,0 +1,310 @@
+# 新能源投资收益计算器 - Agent配置文件
+
+## 项目概述
+多Agent协作的新能源项目投资决策辅助系统
+支持平台: Android、Windows
+技术栈: Flutter + Dart
+
+## Agent角色定义
+
+### 1. UI Agent (界面协调员)
+```yaml
+agent_id: ui_agent
+name: 界面协调员
+role: 用户交互入口，负责界面渲染和状态管理
+responsibilities:
+  - 表单数据收集与校验
+  - 界面导航和路由管理
+  - 用户操作响应
+  - 数据可视化展示
+  - 与其他Agent的协调通信
+skills:
+  - Flutter UI开发
+  - 状态管理 (Provider/Riverpod)
+  - 响应式布局
+  - 本地存储 (SharedPreferences/Hive)
+```
+
+### 2. Policy Agent (政策解析员)
+```yaml
+agent_id: policy_agent
+name: 政策解析员
+role: 各省机制电价政策管理与解析
+responsibilities:
+  - 维护各省机制电价数据库
+  - 136号文规则解析
+  - 存量/增量项目分类处理
+  - 电价参数自动填充
+  - 政策更新提醒
+skills:
+  - 政策文件解析
+  - SQLite数据管理
+  - 版本控制
+knowledge_base:
+  provinces:
+    - name: 贵州
+      benchmark_price: 0.3515  # 煤电基准价 元/kWh
+      mechanism_policy: 存量按基准价，增量竞价
+      valid_from: "2025-06-01"
+    - name: 山东
+      benchmark_price: 0.3949
+      mechanism_price_existing: 0.3949
+      mechanism_price_new_wind: 0.319
+      mechanism_price_new_pv: 0.225
+    - name: 广东
+      benchmark_price: 0.453
+      mechanism_period_wind: 12
+      mechanism_period_offshore: 14
+    - name: 新疆
+      benchmark_price: 0.262
+      mechanism_price_subsidy: 0.25
+      mechanism_price_flat: 0.262
+    - name: 蒙东
+      benchmark_price: 0.3035
+    - name: 蒙西
+      benchmark_price: 0.2829
+    - name: 甘肃
+      benchmark_price: 0.3078
+      storage_capacity_price: 330  # 元/kW·年
+    - name: 宁夏
+      benchmark_price: 0.2595
+      storage_capacity_price_2025: 100
+      storage_capacity_price_2026: 165
+    - name: 河北
+      benchmark_price: 0.3644
+      storage_capacity_price: 100
+```
+
+### 3. Calc Engine (计算核心)
+```yaml
+agent_id: calc_engine
+name: 计算核心
+role: 财务模型计算与现金流分析
+responsibilities:
+  - 全投资现金流建模
+  - IRR/NPV计算
+  - LCOE计算
+  - 投资回收期计算
+  - 资本金现金流分析
+skills:
+  - 财务数学模型
+  - 迭代算法实现
+  - 高精度计算
+algorithms:
+  irr_calculation: Newton-Raphson迭代法
+  npv_calculation: 现金流折现
+  lcoe_calculation: 全生命周期成本/总发电量
+key_formulas:
+  npv: "∑(CF_t / (1+r)^t) - InitialInvestment"
+  irr: "使NPV=0的折现率r"
+  lcoe: "(总投资现值+运维现值) / 总发电量现值"
+  dynamic_payback: "累计折现现金流转正的年份"
+```
+
+### 4. Sensitivity Agent (敏感分析员)
+```yaml
+agent_id: sensitivity_agent
+name: 敏感分析员
+role: 多维度敏感性分析与风险评估
+responsibilities:
+  - 龙卷风图生成
+  - 单因素敏感性分析
+  - 情景分析(乐观/基准/悲观)
+  - 盈亏平衡点计算
+  - 关键参数识别
+skills:
+  - 数据分析
+  - 统计建模
+  - 可视化
+analysis_dimensions:
+  - 上网电价 ±20%
+  - 利用小时数 ±15%
+  - 初始投资 ±15%
+  - 运维成本 ±20%
+  - 融资成本 ±2%
+  - 建设期 ±1年
+output:
+  - 敏感性排序
+  - 临界值分析
+  - 风险等级评估
+```
+
+### 5. Report Agent (报告生成员)
+```yaml
+agent_id: report_agent
+name: 报告生成员
+role: 投决会报告生成与导出
+responsibilities:
+  - PDF报告生成
+  - Excel模型导出
+  - 图表渲染
+  - 决策建议生成
+  - 历史项目归档
+skills:
+  - PDF生成 (pdf package)
+  - Excel操作 (excel package)
+  - 图表生成
+  - 模板引擎
+report_sections:
+  - 项目概况
+  - 政策依据
+  - 财务指标汇总
+  - 敏感性分析
+  - 现金流表
+  - 风险提示
+  - 投决建议
+decision_rules:
+  pass: "IRR ≥ 门槛值 且 NPV > 0"
+  warning: "IRR 在门槛值±0.5% 或 敏感系数>0.1"
+  reject: "IRR < 门槛值-0.5% 或 NPV ≤ 0"
+```
+
+## Agent协作流程
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI
+    participant Policy
+    participant Calc
+    participant Sensitivity
+    participant Report
+
+    User->>UI: 输入项目信息
+    UI->>Policy: 获取省份电价政策
+    Policy-->>UI: 返回机制电价参数
+    UI->>Calc: 提交计算请求
+    Calc->>Calc: 执行财务计算
+    Calc-->>UI: 返回IRR/NPV/回收期
+    UI->>Sensitivity: 请求敏感性分析
+    Sensitivity->>Sensitivity: 多维度计算
+    Sensitivity-->>UI: 返回龙卷风图数据
+    User->>UI: 点击生成报告
+    UI->>Report: 请求生成投决会报告
+    Report->>Report: 整合所有数据
+    Report-->>UI: 返回PDF/Excel文件
+    UI-->>User: 下载报告
+```
+
+## 数据结构定义
+
+### 项目数据模型
+```dart
+class Project {
+  // 基本信息
+  String id;
+  String name;
+  ProjectType type; // 光伏/风电/储能
+  double capacity; // MW
+  DateTime operationDate; // 投运日期
+  int constructionPeriod; // 建设期(月)
+  int operationPeriod; // 运营期(年)
+  String province;
+  ProjectCategory category; // 存量/增量
+  
+  // 电价参数
+  double mechanismPrice; // 机制电价 元/kWh
+  double mechanismRatio; // 机制电量比例 %
+  int mechanismPeriod; // 机制执行期限(年)
+  double marketRatio; // 市场化交易比例 %
+  double marketDiscount; // 市场化折价系数
+  double greenCertificatePrice; // 绿证收益 元/kWh
+  
+  // 资源参数
+  double utilizationHours; // 年利用小时
+  double degradationRate; // 首年衰减率 %
+  double annualDegradation; // 年衰减率 %
+  
+  // 投资参数
+  double totalInvestment; // 万元
+  double unitInvestment; // 元/W
+  double equityRatio; // 资本金比例 %
+  double loanRate; // 贷款利率 %
+  int loanTerm; // 贷款期限(年)
+  
+  // 成本参数
+  double omcCost; // 运维成本 元/W/年
+  double insuranceRate; // 保险费率 %
+  double taxRate; // 所得税率 %
+  double vatRate; // 增值税率 %
+  double surtaxRate; // 附加税率 %
+  
+  // 计算结果
+  CalculationResult result;
+}
+```
+
+### 计算结果模型
+```dart
+class CalculationResult {
+  // 核心指标
+  double irrBeforeTax; // 税前全投资IRR %
+  double irrEquity; // 税后资本金IRR %
+  double npv; // 净现值 万元
+  double lcoe; // 平准化度电成本 元/kWh
+  double dynamicPayback; // 动态投资回收期 年
+  double staticPayback; // 静态投资回收期 年
+  
+  // 现金流
+  List<double> annualCashFlow; // 年度净现金流
+  List<double> cumulativeCashFlow; // 累计现金流
+  double maxFundingGap; // 最大资金缺口
+  
+  // 年度指标
+  List<YearlyIndicator> yearlyData;
+}
+
+class YearlyIndicator {
+  int year;
+  double generation; // 发电量 万kWh
+  double revenue; // 收入 万元
+  double omc; // 运维成本 万元
+  double depreciation; // 折旧 万元
+  double interest; // 利息 万元
+  double tax; // 所得税 万元
+  double netProfit; // 净利润 万元
+  double cashFlow; // 净现金流 万元
+}
+```
+
+## 各省机制电价数据库(最新)
+
+| 省份 | 煤电基准价(元/kWh) | 存量机制电价 | 增量机制电价 | 备注 |
+|------|-------------------|-------------|-------------|------|
+| 贵州 | 0.3515 | 0.3515 | 竞价形成 | 按136号文执行 |
+| 山东 | 0.3949 | 0.3949 | 风电0.319/光伏0.225 | 全国首个落地 |
+| 广东 | 0.453 | 0.453 | 竞价0.2-0.453 | 存量电价最高 |
+| 新疆 | 0.262 | 补贴0.25/平价0.262 | 光伏0.235/风电0.252 | 竞价区间最低 |
+| 蒙东 | 0.3035 | 0.3035 | - | 绑定煤电基准价 |
+| 蒙西 | 0.2829 | 0.2829 | - | 绑定煤电基准价 |
+| 甘肃 | 0.3078 | 0.3078 | 竞价形成 | 储能容量电价330元/kW·年 |
+| 宁夏 | 0.2595 | 0.2595 | - | 储能容量电价100→165元/kW·年 |
+| 河北 | 0.3644 | 0.3644 | - | 储能容量电价100元/kW·年 |
+| 江苏 | 0.391 | 0.391 | - | - |
+| 浙江 | 0.4153 | 0.4153 | - | - |
+| 上海 | 0.4155 | 0.4155 | - | - |
+| 安徽 | 0.3844 | 0.3844 | - | - |
+| 河南 | 0.3779 | 0.3779 | - | - |
+| 湖北 | 0.4161 | 0.4161 | - | - |
+| 湖南 | 0.45 | 0.45 | - | - |
+| 四川 | 0.4012 | 0.4012 | - | - |
+| 云南 | 0.3358 | 0.3358 | - | - |
+| 陕西 | 0.3545 | 0.3545 | - | - |
+| 山西 | 0.332 | 0.332 | - | - |
+| 广西 | 0.4207 | 0.4207 | - | - |
+| 江西 | 0.4143 | 0.4143 | - | - |
+| 福建 | 0.3932 | 0.3932 | - | - |
+| 青海 | 0.2277 | 0.2277 | - | 电价最低省份 |
+
+## 投决会门槛值参考
+
+| 项目类型 | 税前全投资IRR门槛 | 税后资本金IRR门槛 | 投资回收期上限 |
+|---------|------------------|------------------|--------------|
+| 集中式光伏 | ≥6.5% | ≥8% | 10年 |
+| 分布式光伏 | ≥7% | ≥9% | 9年 |
+| 陆上风电 | ≥6.5% | ≥8% | 10年 |
+| 海上风电 | ≥6% | ≥7.5% | 12年 |
+| 储能电站 | ≥6% | ≥7% | 8年 |
+| 大基地项目 | ≥6% | ≥7.5% | 12年 |
+
+> 注：以上标准参考大唐集团等发电集团最新投决要求

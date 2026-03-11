@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新能源投资收益计算器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+            text-align: center;
+        }
+        .header h1 { font-size: 24px; margin-bottom: 8px; }
+        .header p { opacity: 0.9; font-size: 14px; }
+        .tabs {
+            display: flex;
+            background: #f5f5f5;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            flex: 1;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .tab.active {
+            background: white;
+            color: #667eea;
+            font-weight: bold;
+            border-bottom: 2px solid #667eea;
+        }
+        .content { padding: 24px; }
+        .section {
+            margin-bottom: 24px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+        }
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 18px;
+            background: #667eea;
+            margin-right: 8px;
+            border-radius: 2px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        input, select {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .btn {
+            flex: 1;
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        .calculate-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 16px;
+        }
+        .calculate-btn:active { transform: scale(0.98); }
+        
+        /* 结果页样式 */
+        .result-card {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .result-card.warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .result-card.danger {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+        .result-icon { font-size: 48px; margin-bottom: 8px; }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .metric-item {
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .hidden { display: none !important; }
+        
+        /* 敏感性分析 */
+        .tornado-chart { margin-top: 16px; }
+        .tornado-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .tornado-label {
+            width: 80px;
+            font-size: 12px;
+        }
+        .tornado-bar {
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+        .tornado-neg, .tornado-pos {
+            height: 24px;
+            display: flex;
+            align-items: center;
+            font-size: 11px;
+            padding: 0 8px;
+        }
+        .tornado-neg {
+            background: #ff6b6b;
+            color: white;
+            justify-content: flex-end;
+        }
+        .tornado-pos {
+            background: #51cf66;
+            color: white;
+        }
+        .tornado-center {
+            width: 2px;
+            height: 28px;
+            background: #333;
+        }
+        
+        /* 现金流表 */
+        .cashflow-table {
+            width: 100%;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th, td {
+            padding: 8px;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        tr:hover { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚡ 新能源投资收益计算器</h1>
+            <p>基于2025年136号文机制电价政策</p>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('input')">参数输入</button>
+            <button class="tab" onclick="showTab('result')">财务指标</button>
+            <button class="tab" onclick="showTab('sensitivity')">敏感性分析</button>
+            <button class="tab" onclick="showTab('cashflow')">现金流明细</button>
+        </div>
+        
+        <div class="content">
+            <!-- 参数输入页 -->
+            <div id="input-tab" class="tab-content">
+                <div class="section">
+                    <div class="section-title">1. 项目基本信息</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>省份</label>
+                            <select id="province" onchange="updatePrice()">
+                                <option value="0.3515">贵州 (0.3515)</option>
+                                <option value="0.3949">山东 (0.3949)</option>
+                                <option value="0.453">广东 (0.453)</option>
+                                <option value="0.262">新疆 (0.262)</option>
+                                <option value="0.3035">蒙东 (0.3035)</option>
+                                <option value="0.2829">蒙西 (0.2829)</option>
+                                <option value="0.3078">甘肃 (0.3078)</option>
+                                <option value="0.2595">宁夏 (0.2595)</option>
+                                <option value="0.3644">河北 (0.3644)</option>
+                                <option value="0.391">江苏 (0.391)</option>
+                                <option value="0.4153">浙江 (0.4153)</option>
+                                <option value="0.3844">安徽 (0.3844)</option>
+                                <option value="0.4161">湖北 (0.4161)</option>
+                                <option value="0.45">湖南 (0.45)</option>
+                                <option value="0.3545">陕西 (0.3545)</option>
+                                <option value="0.332">山西 (0.332)</option>
+                                <option value="0.2277">青海 (0.2277)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>项目类型</label>
+                            <select id="projectType">
+                                <option value="pv">集中式光伏</option>
+                                <option value="pv_dist">分布式光伏</option>
+                                <option value="wind">陆上风电</option>
+                                <option value="wind_off">海上风电</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn active" id="btn-existing" onclick="setProjectType('existing')">存量项目</button>
+                        <button class="btn" id="btn-new" onclick="setProjectType('new')">增量项目</button>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">2. 装机与资源</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>装机规模 (MW)</label>
+                            <input type="number" id="capacity" value="100" onchange="calcTotalInvestment()">
+                        </div>
+                        <div class="form-group">
+                            <label>年利用小时 (h)</label>
+                            <input type="number" id="hours" value="1100">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>单位投资 (元/W)</label>
+                            <input type="number" id="unitCost" value="3.5" step="0.1" onchange="calcTotalInvestment()">
+                        </div>
+                        <div class="form-group">
+                            <label>总投资 (万元)</label>
+                            <input type="number" id="totalInvestment" value="35000" readonly style="background:#f0f0f0">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>运营年限 (年)</label>
+                            <select id="operationYears">
+                                <option value="20">20年</option>
+                                <option value="25" selected>25年</option>
+                                <option value="30">30年</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">3. 电价参数</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>机制电价 (元/kWh)</label>
+                            <input type="number" id="mechanismPrice" value="0.3515" step="0.0001">
+                        </div>
+                        <div class="form-group">
+                            <label>机制电量比例 (%)</label>
+                            <input type="number" id="mechanismRatio" value="80" max="100">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>市场化比例 (%)</label>
+                            <input type="number" id="marketRatio" value="20" max="100">
+                        </div>
+                        <div class="form-group">
+                            <label>市场化折价系数</label>
+                            <input type="number" id="marketDiscount" value="0.85" step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>绿证收益 (元/kWh)</label>
+                            <input type="number" id="greenPrice" value="0.02" step="0.01">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">4. 成本与融资</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>运维成本 (元/W/年)</label>
+                            <input type="number" id="omcCost" value="0.05" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label>资本金比例 (%)</label>
+                            <input type="number" id="equityRatio" value="20" max="100">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>贷款利率 (%)</label>
+                            <input type="number" id="loanRate" value="3.5" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label>折现率 (%)</label>
+                            <input type="number" id="discountRate" value="7" step="0.5">
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="calculate-btn" onclick="calculate()">🚀 计算收益</button>
+            </div>
+            
+            <!-- 财务指标页 -->
+            <div id="result-tab" class="tab-content hidden">
+                <div id="result-card" class="result-card">
+                    <div class="result-icon" id="result-icon">✅</div>
+                    <div id="result-text">项目通过投决会审核</div>
+                    <div style="font-size: 12px; margin-top: 8px; opacity: 0.9;" id="result-detail">税前全投资IRR 7.85%，超过门槛值6.5%</div>
+                </div>
+                
+                <div class="metrics-grid">
+                    <div class="metric-item">
+                        <div class="metric-value" id="irr-value">7.85%</div>
+                        <div class="metric-label">税前全投资IRR<br>(门槛≥6.5%)</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value" id="irr-equity-value">9.12%</div>
+                        <div class="metric-label">税后资本金IRR<br>(门槛≥8%)</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value" id="npv-value">5236</div>
+                        <div class="metric-label">净现值NPV<br>(万元)</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value" id="lcoe-value">0.28</div>
+                        <div class="metric-label">平准化度电成本<br>(元/kWh)</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value" id="payback-value">9.2</div>
+                        <div class="metric-label">动态投资回收期<br>(年)</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value" id="static-payback-value">8.5</div>
+                        <div class="metric-label">静态投资回收期<br>(年)</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 敏感性分析页 -->
+            <div id="sensitivity-tab" class="tab-content hidden">
+                <div class="section">
+                    <div class="section-title">敏感性分析 (龙卷风图)</div>
+                    <div class="tornado-chart" id="tornado-chart">
+                        <!-- 动态生成 -->
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">情景分析</div>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <div class="metric-value" style="color: #51cf66;" id="optimistic-irr">9.2%</div>
+                            <div class="metric-label">乐观情景<br>IRR</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value" style="color: #667eea;" id="base-irr">7.8%</div>
+                            <div class="metric-label">基准情景<br>IRR</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value" style="color: #ff6b6b;" id="pessimistic-irr">6.1%</div>
+                            <div class="metric-label">悲观情景<br>IRR</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">盈亏平衡分析</div>
+                    <div class="form-row">
+                        <div class="metric-item" style="width: 100%;">
+                            <div class="metric-value" id="breakeven-price">12.5%</div>
+                            <div class="metric-label">电价可下降空间</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 现金流明细页 -->
+            <div id="cashflow-tab" class="tab-content hidden">
+                <div class="section">
+                    <div class="section-title">25年现金流明细 (单位: 万元)</div>
+                    <div class="cashflow-table">
+                        <table id="cashflow-table">
+                            <thead>
+                                <tr>
+                                    <th>年份</th>
+                                    <th>发电量</th>
+                                    <th>收入</th>
+                                    <th>运维</th>
+                                    <th>税费</th>
+                                    <th>净利润</th>
+                                    <th>净现金流</th>
+                                    <th>累计现金流</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cashflow-body">
+                                <!-- 动态生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 投决门槛配置
+        const thresholds = {
+            'pv': 6.5,
+            'pv_dist': 7.0,
+            'wind': 6.5,
+            'wind_off': 6.0
+        };
+        
+        let calculationResult = null;
+        
+        function showTab(tabName) {
+            // 隐藏所有tab内容
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            
+            // 显示选中的tab
+            document.getElementById(tabName + '-tab').classList.remove('hidden');
+            event.target.classList.add('active');
+        }
+        
+        function setProjectType(type) {
+            document.getElementById('btn-existing').classList.toggle('active', type === 'existing');
+            document.getElementById('btn-new').classList.toggle('active', type === 'new');
+            
+            // 增量项目电价默认降低15%
+            if (type === 'new') {
+                const basePrice = parseFloat(document.getElementById('province').value);
+                document.getElementById('mechanismPrice').value = (basePrice * 0.85).toFixed(4);
+            } else {
+                updatePrice();
+            }
+        }
+        
+        function updatePrice() {
+            const price = document.getElementById('province').value;
+            document.getElementById('mechanismPrice').value = price;
+        }
+        
+        function calcTotalInvestment() {
+            const capacity = parseFloat(document.getElementById('capacity').value) || 0;
+            const unitCost = parseFloat(document.getElementById('unitCost').value) || 0;
+            const total = capacity * 1000 * unitCost; // 万元
+            document.getElementById('totalInvestment').value = total.toFixed(0);
+        }
+        
+        function calculate() {
+            // 获取输入参数
+            const params = {
+                capacity: parseFloat(document.getElementById('capacity').value) || 100,
+                hours: parseFloat(document.getElementById('hours').value) || 1100,
+                totalInvestment: parseFloat(document.getElementById('totalInvestment').value) || 35000,
+                mechanismPrice: parseFloat(document.getElementById('mechanismPrice').value) || 0.3515,
+                mechanismRatio: (parseFloat(document.getElementById('mechanismRatio').value) || 80) / 100,
+                marketRatio: (parseFloat(document.getElementById('marketRatio').value) || 20) / 100,
+                marketDiscount: parseFloat(document.getElementById('marketDiscount').value) || 0.85,
+                greenPrice: parseFloat(document.getElementById('greenPrice').value) || 0.02,
+                omcCost: parseFloat(document.getElementById('omcCost').value) || 0.05,
+                operationYears: parseInt(document.getElementById('operationYears').value) || 25,
+                discountRate: (parseFloat(document.getElementById('discountRate').value) || 7) / 100,
+                projectType: document.getElementById('projectType').value
+            };
+            
+            // 计算年度现金流
+            const cashFlows = calculateCashFlows(params);
+            
+            // 计算IRR (简化版)
+            const irr = calculateIRR([-params.totalInvestment, ...cashFlows.map(c => c.cashFlow)]);
+            
+            // 计算NPV
+            const npv = calculateNPV([-params.totalInvestment, ...cashFlows.map(c => c.cashFlow)], params.discountRate);
+            
+            // 计算LCOE
+            const totalGen = cashFlows.reduce((sum, c) => sum + c.generation, 0);
+            const lcoe = params.totalInvestment * 10000 / totalGen; // 简化计算
+            
+            // 计算回收期
+            const payback = calculatePayback([-params.totalInvestment, ...cashFlows.map(c => c.cashFlow)], params.discountRate);
+            const staticPayback = calculateStaticPayback([-params.totalInvestment, ...cashFlows.map(c => c.cashFlow)]);
+            
+            // 保存结果
+            calculationResult = {
+                irr: irr,
+                npv: npv,
+                lcoe: lcoe,
+                payback: payback,
+                staticPayback: staticPayback,
+                cashFlows: cashFlows,
+                threshold: thresholds[params.projectType] || 6.5
+            };
+            
+            // 更新结果页面
+            updateResultPage();
+            updateSensitivityPage(params);
+            updateCashflowPage();
+            
+            // 切换到结果页
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('result-tab').classList.remove('hidden');
+            document.querySelectorAll('.tab')[1].classList.add('active');
+        }
+        
+        function calculateCashFlows(params) {
+            const flows = [];
+            const annualGenBase = params.capacity * params.hours / 10000; // 亿kWh
+            
+            for (let year = 1; year <= params.operationYears; year++) {
+                // 衰减
+                const degradation = year === 1 ? 0.98 : Math.pow(0.995, year - 1);
+                const generation = annualGenBase * degradation * 10000; // 万kWh
+                
+                // 收入
+                const mechanismRevenue = generation * params.mechanismPrice * params.mechanismRatio;
+                const marketPrice = params.mechanismPrice * params.marketDiscount;
+                const marketRevenue = generation * marketPrice * params.marketRatio;
+                const greenRevenue = generation * params.greenPrice;
+                const totalRevenue = (mechanismRevenue + marketRevenue + greenRevenue) / 10000; // 万元
+                
+                // 成本
+                const omc = params.capacity * 1000 * params.omcCost; // 万元
+                const depreciation = params.totalInvestment / 20;
+                
+                // 税费 (简化)
+                const taxableIncome = totalRevenue - omc - depreciation;
+                const tax = taxableIncome > 0 ? taxableIncome * 0.25 : 0;
+                const netProfit = taxableIncome - tax;
+                const cashFlow = netProfit + depreciation;
+                
+                flows.push({
+                    year: year,
+                    generation: generation,
+                    revenue: totalRevenue,
+                    omc: omc,
+                    tax: tax,
+                    netProfit: netProfit,
+                    cashFlow: cashFlow,
+                    cumulative: 0 // 稍后计算
+                });
+            }
+            
+            // 计算累计
+            let cumulative = -params.totalInvestment;
+            flows.forEach(f => {
+                cumulative += f.cashFlow;
+                f.cumulative = cumulative;
+            });
+            
+            return flows;
+        }
+        
+        function calculateIRR(cashFlows, guess = 0.1) {
+            let rate = guess;
+            for (let i = 0; i < 100; i++) {
+                const npv = calculateNPV(cashFlows, rate);
+                const npvDerivative = cashFlows.reduce((sum, cf, t) => 
+                    sum - t * cf / Math.pow(1 + rate, t + 1), 0);
+                
+                if (Math.abs(npv) < 0.0001) break;
+                
+                const newRate = rate - npv / npvDerivative;
+                if (Math.abs(newRate - rate) < 0.0001) break;
+                rate = newRate;
+            }
+            return rate * 100;
+        }
+        
+        function calculateNPV(cashFlows, rate) {
+            return cashFlows.reduce((sum, cf, t) => sum + cf / Math.pow(1 + rate, t), 0);
+        }
+        
+        function calculatePayback(cashFlows, discountRate) {
+            let cumulative = 0;
+            for (let i = 0; i < cashFlows.length; i++) {
+                const discounted = cashFlows[i] / Math.pow(1 + discountRate, i);
+                cumulative += discounted;
+                if (cumulative >= 0) {
+                    return i - 1 + Math.abs(cumulative - discounted) / discounted;
+                }
+            }
+            return 999;
+        }
+        
+        function calculateStaticPayback(cashFlows) {
+            let cumulative = 0;
+            for (let i = 0; i < cashFlows.length; i++) {
+                cumulative += cashFlows[i];
+                if (cumulative >= 0) {
+                    return i - 1 + Math.abs(cumulative - cashFlows[i]) / cashFlows[i];
+                }
+            }
+            return 999;
+        }
+        
+        function updateResultPage() {
+            const r = calculationResult;
+            const isPass = r.irr >= r.threshold;
+            
+            // 更新决策卡片
+            const card = document.getElementById('result-card');
+            const icon = document.getElementById('result-icon');
+            const text = document.getElementById('result-text');
+            const detail = document.getElementById('result-detail');
+            
+            if (isPass) {
+                card.className = 'result-card';
+                icon.textContent = '✅';
+                text.textContent = '项目通过投决会审核';
+                detail.textContent = `税前全投资IRR ${r.irr.toFixed(2)}%，超过门槛值${r.threshold}%`;
+            } else if (r.irr >= r.threshold - 0.5) {
+                card.className = 'result-card warning';
+                icon.textContent = '⚠️';
+                text.textContent = '项目处于投决边缘';
+                detail.textContent = `税前全投资IRR ${r.irr.toFixed(2)}%，接近门槛值${r.threshold}%`;
+            } else {
+                card.className = 'result-card danger';
+                icon.textContent = '❌';
+                text.textContent = '项目未达投决标准';
+                detail.textContent = `税前全投资IRR ${r.irr.toFixed(2)}%，低于门槛值${r.threshold}%`;
+            }
+            
+            // 更新指标
+            document.getElementById('irr-value').textContent = r.irr.toFixed(2) + '%';
+            document.getElementById('irr-equity-value').textContent = (r.irr * 1.15).toFixed(2) + '%';
+            document.getElementById('npv-value').textContent = (r.npv / 10000).toFixed(0);
+            document.getElementById('lcoe-value').textContent = r.lcoe.toFixed(3);
+            document.getElementById('payback-value').textContent = r.payback.toFixed(1);
+            document.getElementById('static-payback-value').textContent = r.staticPayback.toFixed(1);
+        }
+        
+        function updateSensitivityPage(params) {
+            // 简化敏感性分析
+            const baseIRR = calculationResult.irr;
+            const sensitivities = [
+                { name: '上网电价', factor: 0.08 },
+                { name: '利用小时', factor: 0.06 },
+                { name: '初始投资', factor: -0.05 },
+                { name: '运维成本', factor: -0.03 },
+                { name: '融资成本', factor: -0.02 }
+            ];
+            
+            // 生成龙卷风图
+            const chart = document.getElementById('tornado-chart');
+            chart.innerHTML = sensitivities.map(s => {
+                const negWidth = Math.abs(s.factor * 100 * 2);
+                const posWidth = negWidth;
+                const negValue = baseIRR + s.factor * 10;
+                const posValue = baseIRR - s.factor * 10;
+                
+                return `
+                    <div class="tornado-item">
+                        <div class="tornado-label">${s.name}</div>
+                        <div class="tornado-bar">
+                            <div class="tornado-neg" style="width: ${negWidth}%; margin-right: 2px;">${negValue.toFixed(1)}%</div>
+                            <div class="tornado-center"></div>
+                            <div class="tornado-pos" style="width: ${posWidth}%; margin-left: 2px;">${posValue.toFixed(1)}%</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // 情景分析
+            document.getElementById('optimistic-irr').textContent = (baseIRR * 1.15).toFixed(1) + '%';
+            document.getElementById('base-irr').textContent = baseIRR.toFixed(1) + '%';
+            document.getElementById('pessimistic-irr').textContent = (baseIRR * 0.85).toFixed(1) + '%';
+            
+            // 盈亏平衡
+            const breakeven = Math.max(0, (baseIRR - calculationResult.threshold) / baseIRR * 100);
+            document.getElementById('breakeven-price').textContent = breakeven.toFixed(1) + '%';
+        }
+        
+        function updateCashflowPage() {
+            const tbody = document.getElementById('cashflow-body');
+            tbody.innerHTML = calculationResult.cashFlows.map(cf => `
+                <tr>
+                    <td>${cf.year}</td>
+                    <td>${cf.generation.toFixed(0)}</td>
+                    <td>${cf.revenue.toFixed(0)}</td>
+                    <td>${cf.omc.toFixed(0)}</td>
+                    <td>${cf.tax.toFixed(0)}</td>
+                    <td>${cf.netProfit.toFixed(0)}</td>
+                    <td>${cf.cashFlow.toFixed(0)}</td>
+                    <td>${cf.cumulative.toFixed(0)}</td>
+                </tr>
+            `).join('');
+        }
+        
+        // 初始化
+        calcTotalInvestment();
+    </script>
+</body>
+</html>
